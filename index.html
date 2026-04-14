@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Malaria — Cell Classification</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+<style>
+  :root {
+    --bg: #050a0f;
+    --surface: #0b1320;
+    --surface2: #101d2e;
+    --border: #1a2d42;
+    --accent: #00d4ff;
+    --accent2: #0090cc;
+    --danger: hwb(0 30% 0%);
+    --safe: #00e887;
+    --text: #cde8ff;
+    --muted: #4a7a9b;
+    --mono: 'Space Mono', monospace;
+    --sans: 'Syne', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── GRID BACKGROUND ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── GLOW ORBS ── */
+  .orb {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(120px);
+    pointer-events: none;
+    z-index: 0;
+    opacity: .18;
+  }
+  .orb-1 { width: 500px; height: 500px; background: var(--accent); top: -100px; right: -100px; }
+  .orb-2 { width: 400px; height: 400px; background: #0c37b8; bottom: -100px; left: -80px; }
+
+  /* ── LAYOUT ── */
+  .wrapper {
+    position: relative; z-index: 1;
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 24px 80px;
+  }
+
+  /* ── HEADER ── */
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 28px 0 32px;
+    border-bottom: 1px solid var(--border);
+  }
+  .logo {
+    display: flex; align-items: center; gap: 14px;
+  }
+  .logo-icon {
+    width: 44px; height: 44px;
+    border-radius: 10px;
+    display: grid; place-items: center;
+    font-size: 22px;
+    overflow: hidden;
+  }
+  .logo-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+  .logo h1 {
+    font-size: 1.4rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: #fff;
+  }
+  .logo span { color: var(--danger); }
+  .badge {
+    font-family: var(--mono);
+    font-size: .68rem;
+    padding: 4px 10px;
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    color: var(--accent);
+    letter-spacing: .06em;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    text-align: center;
+    padding: 56px 0 48px;
+  }
+  .hero-tag {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: .72rem;
+    color: var(--accent);
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+    opacity: .8;
+  }
+  .hero h2 {
+    font-size: clamp(2rem, 5vw, 3.4rem);
+    font-weight: 800;
+    line-height: 1.08;
+    color: #fff;
+    letter-spacing: -.04em;
+    margin-bottom: 18px;
+  }
+  .hero h2 em {
+    font-style: normal;
+    color: var(--danger);
+  }
+  .hero p {
+    font-size: 1.05rem;
+    color: var(--muted);
+    max-width: 520px;
+    margin: 0 auto;
+    line-height: 1.7;
+  }
+
+  /* ── MAIN CARD ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  /* ── UPLOAD ZONE ── */
+  .upload-zone {
+    padding: 48px 32px;
+    display: flex; flex-direction: column; align-items: center;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background .2s;
+    position: relative;
+  }
+  .upload-zone:hover { background: var(--surface2); }
+  .upload-zone.drag-over {
+    background: rgba(0,212,255,.06);
+    border-color: var(--accent);
+  }
+  .upload-zone input { display: none; }
+
+  .upload-icon {
+    width: 72px; height: 72px;
+    border: 2px dashed var(--border);
+    border-radius: 50%;
+    display: grid; place-items: center;
+    margin-bottom: 20px;
+    font-size: 30px;
+    transition: border-color .2s, transform .2s;
+  }
+  .upload-zone:hover .upload-icon {
+    border-color: var(--accent);
+    transform: scale(1.05);
+  }
+  .upload-zone h3 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 8px;
+  }
+  .upload-zone p {
+    font-size: .85rem;
+    color: var(--muted);
+    font-family: var(--mono);
+  }
+  .upload-zone .choose-btn {
+    margin-top: 20px;
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-family: var(--sans);
+    font-size: .85rem;
+    font-weight: 600;
+    padding: 9px 22px;
+    border-radius: 7px;
+    cursor: pointer;
+    transition: background .2s, color .2s;
+    letter-spacing: .02em;
+  }
+  .upload-zone .choose-btn:hover {
+    background: var(--accent);
+    color: #000;
+  }
+
+  /* ── PREVIEW AREA ── */
+  #preview-area {
+    display: none;
+    padding: 32px;
+    border-bottom: 1px solid var(--border);
+    gap: 32px;
+    align-items: flex-start;
+  }
+  #preview-area.active { display: flex; }
+
+  .preview-img-wrap {
+    flex-shrink: 0;
+    width: 180px; height: 180px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    background: #000;
+    position: relative;
+  }
+  .preview-img-wrap img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+  }
+  .img-label {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    background: rgba(0,0,0,.7);
+    font-family: var(--mono);
+    font-size: .6rem;
+    color: var(--muted);
+    padding: 5px 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .preview-info {
+    flex: 1;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .file-meta {
+    font-family: var(--mono);
+    font-size: .75rem;
+    color: var(--muted);
+    line-height: 1.8;
+  }
+  .file-meta span { color: var(--text); }
+  #analyze-btn {
+    align-self: flex-start;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border: none;
+    color: #000;
+    font-family: var(--sans);
+    font-size: .95rem;
+    font-weight: 700;
+    padding: 12px 28px;
+    border-radius: 8px;
+    cursor: pointer;
+    letter-spacing: .02em;
+    transition: opacity .2s, transform .2s;
+    display: flex; align-items: center; gap: 8px;
+  }
+  #analyze-btn:hover { opacity: .88; transform: translateY(-1px); }
+  #analyze-btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+
+  /* ── STATUS BAR ── */
+  #status-bar {
+    display: none;
+    padding: 14px 32px;
+    font-family: var(--mono);
+    font-size: .78rem;
+    border-bottom: 1px solid var(--border);
+    gap: 10px;
+    align-items: center;
+  }
+  #status-bar.active { display: flex; }
+  .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+    flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── RESULT PANEL ── */
+  #result-panel {
+    display: none;
+    padding: 36px 32px;
+    flex-direction: column;
+    gap: 28px;
+  }
+  #result-panel.active { display: flex; }
+
+  .result-header {
+    display: flex; align-items: center; gap: 16px;
+  }
+  .result-dot {
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    box-shadow: 0 0 12px currentColor;
+  }
+  .result-label {
+    font-size: 1.6rem;
+    font-weight: 800;
+    letter-spacing: -.03em;
+  }
+  .result-conf {
+    margin-left: auto;
+    font-family: var(--mono);
+    font-size: 1.3rem;
+    font-weight: 700;
+  }
+
+  /* ── PROBABILITY BARS ── */
+  .prob-section h4 {
+    font-family: var(--mono);
+    font-size: .72rem;
+    color: var(--muted);
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+  .prob-row {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 12px;
+  }
+  .prob-name {
+    font-family: var(--mono);
+    font-size: .78rem;
+    width: 110px;
+    flex-shrink: 0;
+  }
+  .prob-track {
+    flex: 1;
+    height: 8px;
+    background: var(--surface2);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+  .prob-fill {
+    height: 100%;
+    border-radius: 99px;
+    transition: width 1s cubic-bezier(.22,1,.36,1);
+    width: 0;
+  }
+  .prob-val {
+    font-family: var(--mono);
+    font-size: .78rem;
+    width: 52px;
+    text-align: right;
+    color: var(--muted);
+  }
+
+  /* ── INTERPRETATION BOX ── */
+  .interpret-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 22px;
+    font-size: .88rem;
+    line-height: 1.7;
+    color: var(--muted);
+  }
+  .interpret-box strong { color: var(--text); }
+
+  /* ── MODEL INFO ── */
+  .model-info {
+    padding: 22px 32px;
+    border-top: 1px solid var(--border);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 16px;
+  }
+  .info-cell {
+    font-family: var(--mono);
+    font-size: .7rem;
+    color: var(--muted);
+    line-height: 1.8;
+  }
+  .info-cell strong { display: block; color: var(--accent); font-size: .8rem; }
+
+  /* ── RESET BTN ── */
+  #reset-btn {
+    align-self: flex-start;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: var(--sans);
+    font-size: .82rem;
+    font-weight: 600;
+    padding: 8px 18px;
+    border-radius: 7px;
+    cursor: pointer;
+    transition: border-color .2s, color .2s;
+  }
+  #reset-btn:hover { border-color: var(--text); color: var(--text); }
+
+  /* ── ERROR ── */
+  #error-panel {
+    display: none;
+    padding: 24px 32px;
+    align-items: center;
+    gap: 14px;
+    background: rgba(255,68,68,.06);
+    border-top: 1px solid rgba(255,68,68,.2);
+  }
+  #error-panel.active { display: flex; }
+  #error-panel p {
+    font-family: var(--mono);
+    font-size: .8rem;
+    color: #ff8888;
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    text-align: center;
+    padding: 40px 0 0;
+    font-family: var(--mono);
+    font-size: .7rem;
+    color: var(--muted);
+    line-height: 2;
+  }
+
+  /* ── SERVER CONFIG ── */
+  .server-cfg {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 16px;
+    padding: 12px 14px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: var(--mono);
+    font-size: .75rem;
+  }
+  .server-cfg input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: .75rem;
+  }
+  .server-cfg label { color: var(--muted); white-space: nowrap; }
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--muted);
+    flex-shrink: 0;
+  }
+  .status-dot.online { background: var(--safe); box-shadow: 0 0 6px var(--safe); }
+  .status-dot.offline { background: var(--danger); }
+
+  /* responsive */
+  @media (max-width: 600px) {
+    #preview-area { flex-direction: column; }
+    .preview-img-wrap { width: 100%; height: 200px; }
+    .result-conf { font-size: 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+
+<div class="wrapper">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon"><img src="malaria.png" alt="MalariaScan logo"/></div>
+      <h1>Malaria<span>AI</span></h1>
+    </div>
+    <div class="badge">CRTL + CELL</div>
+  </header>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-tag">bio for engineering project</div>
+    </br>
+    <div class="hero-tag">deep learning diagnostics using CNN Convolution</div>
+    <h2>Detection of <em>Malaria</em><br>from Blood Cell</h2>
+  </div>
+
+  <!-- SERVER CONFIG -->
+  <div class="server-cfg">
+    <label>API ▶</label>
+    <input type="text" id="server-url" value="http://localhost:5001" placeholder="http://localhost:5001"/>
+    <div class="status-dot" id="server-status"></div>
+    <span id="server-status-text" style="color:var(--muted); font-size:.7rem;">—</span>
+    <button onclick="checkServer()" style="
+      background:transparent; border:1px solid var(--border); color:var(--muted);
+      font-family:var(--mono); font-size:.68rem; padding:4px 10px; border-radius:4px; cursor:pointer;">
+      <i class="fas fa-wifi"></i> PING
+    </button>
+  </div>
+
+  <!-- MAIN CARD -->
+  <div class="card">
+
+    <!-- UPLOAD ZONE -->
+    <div class="upload-zone" id="drop-zone">
+      <input type="file" id="file-input" accept="image/*"/>
+      <div class="upload-icon">↓</div>
+      <h3>Drop a blood cell image here</h3>
+      <p>PNG, JPG, BMP</p>
+      <button class="choose-btn" onclick="document.getElementById('file-input').click()"><i class="fas fa-upload"></i> Upload</button>
+    </div>
+
+    <!-- PREVIEW -->
+    <div id="preview-area">
+      <div class="preview-img-wrap">
+        <img id="preview-img" src="" alt="preview"/>
+        <div class="img-label" id="img-label">filename.png</div>
+      </div>
+      <div class="preview-info">
+        <div class="file-meta" id="file-meta">Loading...</div>
+        <button id="analyze-btn" onclick="analyze()">
+        <i class="fas fa-play"></i> Analyze
+        </button>
+        <button id="reset-btn" onclick="reset()"><i class="fas fa-redo"></i> Next</button>
+      </div>
+    </div>
+
+    <!-- STATUS -->
+    <div id="status-bar">
+      <div class="spinner"></div>
+      <span id="status-text">Running inference…</span>
+    </div>
+
+    <!-- ERROR -->
+    <div id="error-panel">
+      <span>[!]</span>
+      <p id="error-text">Could not connect to API server. Make sure the Python backend is running on localhost:5000.</p>
+    </div>
+
+    <!-- RESULT -->
+    <div id="result-panel">
+      <div class="result-header">
+        <div class="result-dot" id="result-dot"></div>
+        <div class="result-label" id="result-label">—</div>
+        <div class="result-conf" id="result-conf">—</div>
+      </div>
+
+      <div class="prob-section">
+        <h4>// class probabilities</h4>
+        <div id="prob-bars"></div>
+      </div>
+
+      <div class="interpret-box" id="interpret-box"></div>
+    </div>
+
+    <!-- MODEL INFO STRIP -->
+    <div class="model-info">
+      <div class="info-cell"><strong>Architecture</strong>CNN (8 Conv layers)</div>
+      <div class="info-cell"><strong>Input Shape</strong>64 × 64 × 3 RGB</div>
+      <div class="info-cell"><strong>Output</strong>2 classes · softmax</div>
+      <div class="info-cell"><strong>Regularization</strong>BatchNorm + Dropout</div>
+      <div class="info-cell"><strong>Framework</strong>Keras 3.14 · TF</div>
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    Malaria Detection using CNN - Bio for Engineering<br>
+    AIML B - CTRL + CELL
+  </footer>
+
+</div>
+
+<script>
+  let selectedFile = null;
+
+  /* ── DRAG & DROP ── */
+  const dropZone = document.getElementById('drop-zone');
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) loadFile(file);
+  });
+  document.getElementById('file-input').addEventListener('change', e => {
+    if (e.target.files[0]) loadFile(e.target.files[0]);
+  });
+
+  /* ── LOAD FILE ── */
+  function loadFile(file) {
+    selectedFile = file;
+    const reader = new FileReader();
+    reader.onload = e => {
+      document.getElementById('preview-img').src = e.target.result;
+      document.getElementById('img-label').textContent = file.name;
+      document.getElementById('file-meta').innerHTML =
+        `Name: <span>${file.name}</span><br>` +
+        `Size: <span>${(file.size/1024).toFixed(1)} KB</span><br>` +
+        `Type: <span>${file.type || 'image/*'}</span>`;
+    };
+    reader.readAsDataURL(file);
+
+    // show preview, hide result/error
+    document.getElementById('upload-zone') && (document.getElementById('upload-zone').style.display = 'none');
+    document.getElementById('preview-area').classList.add('active');
+    document.getElementById('result-panel').classList.remove('active');
+    document.getElementById('error-panel').classList.remove('active');
+    document.getElementById('status-bar').classList.remove('active');
+  }
+
+  /* ── ANALYZE ── */
+  async function analyze() {
+    if (!selectedFile) return;
+
+    const apiBase = document.getElementById('server-url').value.trim().replace(/\/$/, '');
+    const btn = document.getElementById('analyze-btn');
+    btn.disabled = true;
+
+    setStatus(true, 'Sending image to model…');
+    document.getElementById('result-panel').classList.remove('active');
+    document.getElementById('error-panel').classList.remove('active');
+
+    const form = new FormData();
+    form.append('file', selectedFile);
+
+    try {
+      setStatus(true, 'Running CNN inference…');
+      const res = await fetch(`${apiBase}/predict`, { method: 'POST', body: form });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `HTTP ${res.status}`);
+      }
+      const data = await res.json();
+      setStatus(false);
+      showResult(data);
+    } catch(err) {
+      setStatus(false);
+      document.getElementById('error-text').textContent =
+        `Error: ${err.message}. Make sure the Python backend is running.`;
+      document.getElementById('error-panel').classList.add('active');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  /* ── SHOW RESULT ── */
+  function showResult(data) {
+    const infected = data.is_infected;
+    const color = infected ? '#ef4444' : '#00e887';
+
+    document.getElementById('result-dot').style.background = color;
+    document.getElementById('result-dot').style.boxShadow = `0 0 14px ${color}`;
+    document.getElementById('result-dot').style.color = color;
+    document.getElementById('result-label').textContent = data.prediction;
+    document.getElementById('result-label').style.color = color;
+    document.getElementById('result-conf').textContent = `${data.confidence}%`;
+    document.getElementById('result-conf').style.color = color;
+
+    // probability bars
+    const barColors = { 'Parasitized': '#ef4444', 'Uninfected': '#00e887' };
+    const barsHtml = Object.entries(data.probabilities).map(([cls, pct]) => `
+      <div class="prob-row">
+        <div class="prob-name">${cls}</div>
+        <div class="prob-track"><div class="prob-fill" data-val="${pct}" style="background:${barColors[cls]||'var(--accent)'}; width:0"></div></div>
+        <div class="prob-val">${pct}%</div>
+      </div>`).join('');
+    document.getElementById('prob-bars').innerHTML = barsHtml;
+
+    // animate bars
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      document.querySelectorAll('.prob-fill').forEach(el => {
+        el.style.width = el.dataset.val + '%';
+      });
+    }));
+
+    // interpretation
+    document.getElementById('interpret-box').innerHTML = infected
+      ? `<strong>[⚠] Parasitized cell detected.</strong> The model identified malaria parasite characteristics in this cell image with <strong>${data.confidence}%</strong> confidence. This is a positive indicator for <em>Plasmodium</em> infection. Please consult a medical professional for definitive diagnosis.`
+      : `<strong>[✓] No parasites detected.</strong> The model classified this cell as <strong>Uninfected</strong> with <strong>${data.confidence}%</strong> confidence. No signs of malaria parasite were found. This is a computational tool — clinical confirmation is recommended.`;
+
+    document.getElementById('result-panel').classList.add('active');
+  }
+
+  /* ── STATUS ── */
+  function setStatus(on, msg='') {
+    const bar = document.getElementById('status-bar');
+    bar.classList.toggle('active', on);
+    if (msg) document.getElementById('status-text').textContent = msg;
+  }
+
+  /* ── RESET ── */
+  function reset() {
+    selectedFile = null;
+    document.getElementById('file-input').value = '';
+    document.getElementById('preview-area').classList.remove('active');
+    document.getElementById('result-panel').classList.remove('active');
+    document.getElementById('error-panel').classList.remove('active');
+    document.getElementById('status-bar').classList.remove('active');
+  }
+
+  /* ── PING SERVER ── */
+  async function checkServer() {
+    const apiBase = document.getElementById('server-url').value.trim().replace(/\/$/, '');
+    const dot = document.getElementById('server-status');
+    const txt = document.getElementById('server-status-text');
+    dot.className = 'status-dot';
+    txt.textContent = 'pinging…';
+    try {
+      const res = await fetch(`${apiBase}/health`, { signal: AbortSignal.timeout(3000) });
+      const data = await res.json();
+      dot.className = 'status-dot online';
+      txt.textContent = data.model_loaded ? 'online · model ready' : 'online · no model';
+    } catch {
+      dot.className = 'status-dot offline';
+      txt.textContent = 'offline';
+    }
+  }
+
+  // auto-ping on load
+  window.addEventListener('load', () => setTimeout(checkServer, 800));
+</script>
+</body>
+</html>
